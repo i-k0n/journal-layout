@@ -10,14 +10,17 @@ function calculateSpread() {
     const fillPage = document.getElementById('fill-page').checked;
     const sections = parseInt(document.getElementById('sections').value) || 1;
     const columns = parseInt(document.getElementById('columns').value) || 1;
+    let cellSize = 24;
 
+    
     // Calculate available rows:
     //   - subtract number of reserved rows from row count, add 1 to sum for gap between title and content
     //   - if adding gaps between rows:
     //       - subtract 1 from vertical sections needed for gap count, 
     //       - then subtract that amount from the row count
     const rowsAvailable = numRows - (reservedRows + 1) - (haveRowGap ? (sections - 1) : 0);
-
+    
+    updateCanvasSize(numColumns, numRows, cellSize)
     // get modulus of vertical sections to use for calculating different row heights for filling the page
     const rowRemainder = rowsAvailable % sections;
     
@@ -57,30 +60,44 @@ function calculateSpread() {
         <p><em>${sectionSize}</em></p>
     `;
 
-    console.log(`
-    Number of columns: ${numColumns}
-    Number of rows:    ${rowsAvailable}
-    Row gap?           ${haveRowGap}
-    Column gap?        ${haveColGap}
-    Fill page?         ${fillPage}
-    Row remainder      ${rowRemainder}
-    Sections:          ${sections}
-    Gaps:              ${haveRowGap ? sections - 1 : 0}
-    `);
+    // console.log(`
+    // Number of columns: ${numColumns}
+    // Number of rows:    ${rowsAvailable}
+    // Row gap?           ${haveRowGap}
+    // Column gap?        ${haveColGap}
+    // Fill page?         ${fillPage}
+    // Row remainder      ${rowRemainder}
+    // Sections:          ${sections}
+    // Gaps:              ${haveRowGap ? sections - 1 : 0}
+    // `);
 
-
-    drawCanvas(numColumns, rowsAvailable, sections, columns, reservedRows, normHeight, haveRowGap, haveColGap, fillPage, normSections, rowRemainder);
-
+    drawCanvas(numColumns, rowsAvailable, sections, columns, reservedRows, normHeight, haveRowGap, haveColGap, fillPage, normSections, rowRemainder, cellSize);
 }
+
 const c = document.getElementById("canvas");
 const ctx = c.getContext("2d");
 
 function clearCanvas() {
     // ctx.clearRect(0, 0, c.width, c.height);
-    c.width = c.width; // dangerous in some cases; clears canvas state such as transformations, lineWidth and strokeStyle
+    return c.width = c.width; // dangerous in some cases; clears canvas state such as transformations, lineWidth and strokeStyle
 }
 
-function drawCanvas(columns, rows, sectionsReq, columnsReq, titleRows, rowHeight, addRowGap, addColGap, fillPage, normSections, rowRemainder) {
+function updateCanvasSize(width, height, cellSize) {
+    updateCSSVariable('--dotsX', width + 1);
+    updateCSSVariable('--dotsY', height + 1);
+    c.width = width * cellSize + 2;
+    c.height = height * cellSize + 2;
+    return
+}
+
+function updateCSSVariable(propName, value) {
+    // get :root element
+    r = document.querySelector(':root');
+    // set new value
+    return r.style.setProperty(propName, value);
+}
+
+function drawCanvas(columns, rows, sectionsReq, columnsReq, titleRows, rowHeight, addRowGap, addColGap, fillPage, normSections, rowRemainder, cellSize) {
 
     // canvas tips:
     // center stroke, so add 1 to each starting point.
@@ -88,10 +105,10 @@ function drawCanvas(columns, rows, sectionsReq, columnsReq, titleRows, rowHeight
     // ctx.rect(columns/3*oneColumn*i+1, 24*rowHeight+1, columns/3*oneColumn, 24*rowHeight); // for even (3) columns ignoring column widths on dots
     // ctx.rect(Math.floor(columns/3)*oneColumn*i+1+(oneColumn*i), 24*rowHeight+1, Math.floor(columns/3)*oneColumn, 24*rowHeight); // even 3 columns with one column gap, on dots
 
-    const width = c.width-2;
-    const height = c.height-2;
-    const oneColumn = 24;
-    const columnWidth = columns/columnsReq*oneColumn;
+    const oneColumn = cellSize;
+    const width = columns * oneColumn;
+    const height = rows * oneColumn;
+    const columnWidth = columns / columnsReq * oneColumn;
 
     console.log("Drawing canvas...");
     console.log("normal sections", normSections);
@@ -115,47 +132,45 @@ function drawCanvas(columns, rows, sectionsReq, columnsReq, titleRows, rowHeight
 
     for (let i = 0; i < sectionsReq; i++) {
         for (let j = 0; j < columnsReq; j++) {
-            
-            // Get X-position: 
-            //   - number of total columns divided by number of columns needed, rounded down
-            //   - multiply the above by the width of a column (24px) by the stage in the loop (0 to one minus the number of columns requested)
-            //   - then add one to account for the center stroke so the box is placed correctly
-            Xpos = Math.floor(columns/columnsReq)*oneColumn*j+1+(oneColumn*j);
-            
-            // Get Box Width:
-            //   - number of total columns divided by number of columns needed, rounded down
-            //   - multiply the above by the width of a column (24px)
-            boxWidth = Math.floor(columns/columnsReq)*oneColumn;
+          // Get X-position:
+          //   - number of total columns divided by number of columns needed, rounded down
+          //   - multiply the above by the width of a column (24px) by the stage in the loop (0 to one minus the number of columns requested)
+          //   - then add one to account for the center stroke so the box is placed correctly
+          Xpos = Math.floor(columns / columnsReq) * oneColumn * j + 1 + oneColumn * j;
 
-            // Get Box Height:
-            //   - multiply the width of a column (24px) by the calculated row height
-            //   TODO: update value mid-loop for fillPage calculation or run a second loop
-            if (fillPage && rowRemainder) {
-                if (i < rowRemainder) {
-                    console.log("fp1", i, rowRemainder, rowHeight+1);
-                    boxHeight = oneColumn*(rowHeight+1);
-                } else {
-                    console.log("fp2", i, rowRemainder, rowHeight);
-                    boxHeight = oneColumn*rowHeight;
-                }
+          // Get Box Width:
+          //   - number of total columns divided by number of columns needed, rounded down
+          //   - multiply the above by the width of a column (24px)
+          boxWidth = Math.floor(columns / columnsReq) * oneColumn;
+
+          // Get Box Height:
+          //   - multiply the width of a column (24px) by the calculated row height
+          if (fillPage && rowRemainder) {
+            if (i < rowRemainder) {
+              console.log("fp1", i, rowRemainder, rowHeight + 1);
+              boxHeight = oneColumn * (rowHeight + 1);
             } else {
-                boxHeight = oneColumn*rowHeight;
+              console.log("fp2", i, rowRemainder, rowHeight);
+              boxHeight = oneColumn * rowHeight;
             }
-            
-            if (addColGap) {
-                // Draw rectangle
-                // console.log(`Draw1 - Xpos: ${Xpos}, Ypos: ${Ypos+1}`);
-                ctx.rect(Xpos, Ypos+1, boxWidth, boxHeight);        
-            } else {
-                // console.log(`Draw2: Xpos: ${columnWidth*j+1}, Ypos: ${Ypos+1}`);
-                ctx.rect(columnWidth*j+1, Ypos+1, columnWidth, boxHeight);
-            }
+          } else {
+            boxHeight = oneColumn * rowHeight;
+          }
+
+          if (addColGap) {
+            // Draw rectangle
+            // console.log(`Draw1 - Xpos: ${Xpos}, Ypos: ${Ypos+1}`);
+            // TODO: if column sections don't line up properly, try making gaps two columns wide
+            ctx.rect(Xpos, Ypos + 1, boxWidth, boxHeight);
+          } else {
+            // console.log(`Draw2: Xpos: ${columnWidth*j+1}, Ypos: ${Ypos+1}`);
+            ctx.rect(columnWidth * j + 1, Ypos + 1, columnWidth, boxHeight);
+          }
         }
         
         // Update Y-position after each row is drawn
         addRowGap ? Ypos += boxHeight + oneColumn : Ypos += boxHeight;
-        
-        
+                
     }
 
     ctx.strokeStyle = "#999"
