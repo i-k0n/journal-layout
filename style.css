@@ -150,9 +150,13 @@ button.secondary:focus {
     border-radius: 0.5rem;
 }
 .dots-wrapper {
-    width: calc((24px * 26) + 3px);
-    height: calc((24px * 37) + 3px);
-    /* border: 2px solid #9996; */
+    --cell-size: 24px;
+    --dotsX: 26;
+    --dotsY: 38;
+    --dot-size: 3px;
+    width: calc((var(--cell-size) * var(--dotsX)) + var(--dot-size));
+    height: calc((var(--cell-size) * var(--dotsY)) + var(--dot-size));
+    background-size: var(--cell-size);
     background-image: url(./assets/dot-bg.svg);
     background-position: 13px 13px;
 }
